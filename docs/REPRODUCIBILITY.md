@@ -1,5 +1,8 @@
 # Machine Learning Reproducibility Checklist (v2.0)
 
+## Project Origin
+This repository began as a faithful reproduction of a Master's thesis on Parkinson's disease classification. Reproducing the originally reported near-perfect performance exposed a data leakage artifact — the `Duration = 0.0` degeneracy for Healthy Controls (see [`DATA.md`](DATA.md)). That forensic discovery motivated the reusable `DataLeakageDetector` (`src/leakage_detector.py`), which is now run as a pre-modeling QA step and regression test. Reproducibility here therefore covers both the corrected ("honest") model results and the detector's cross-dataset validation.
+
 ## Models / Algorithms
 - [x] Plain description of each model and its mathematical setup: Detailed in `MODEL_CARD.md` and training scripts.
 - [x] Assumptions stated explicitly: Noted in `MODEL_CARD.md`.
@@ -11,6 +14,7 @@
 - [x] Every exclusion and preprocessing step documented: See `src/data_prep.py`.
 - [x] Link to dataset / access procedure: Detailed in `DATA.md`.
 - [x] Collection / labeling / QC: N/A (secondary dataset).
+- [x] Data leakage audit: `DataLeakageDetector` flags the `Duration` within-class degeneracy; the feature is dropped in `src/features.py` before training. Validation suite: `python -m src.validate_detector`.
 
 ## Code
 - [x] Dependencies pinned: `requirements.txt` / `Dockerfile` provided.

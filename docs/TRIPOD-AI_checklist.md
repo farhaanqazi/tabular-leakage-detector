@@ -14,7 +14,7 @@
 - [x] Outcome (Parkinson's label): `PC` column (1 = Parkinson's, 0 = Healthy Control).
 - [x] Predictors / features: Biomechanical properties (AreaError, TimeTriangles, ZeroVel, ZeroAcc, etc.).
 - [x] Sample size and missing-data handling: N=325, no missing values assumed (or handled via simple imputation if present).
-- [x] Feature processing: Standardization applied.
+- [x] Feature processing & QA: Applied `DataLeakageDetector` (univariate AUC, KS stat, degeneracy check) prior to modeling to isolate and remove leaked predictors (e.g., `Duration`). Features were subsequently standardized.
 - [x] Model type & development procedure: Standard ML classifiers; exact setup in code.
 - [x] Validation approach: 80/20 random split (saved securely) + 5-fold cross-validation on train.
 - [x] Performance measures: AUC (discrimination), calibration curves, and precision/recall (clinical utility).
@@ -26,6 +26,7 @@
 
 ## Results
 - [x] Participant flow and characteristics: Summarized in `results/`.
+- [x] Data Leakage Audit: Detected zero-variance degeneracy in control `Duration`; feature excised before model evaluation.
 - [x] Full model specification: Available via `models/` directory and exact `scikit-learn` version.
 - [x] Performance with uncertainty: 95% Confidence Intervals reported.
 - [x] Subgroup / fairness results: Reported in `evaluate.py` outputs.

@@ -6,3 +6,11 @@ models/
 !models/.gitkeep
 .ipynb_checkpoints/
 .DS_Store
+
+# Internal / not-for-publication docs
+# full thesis PDF (student-ID named)
+docs/*.pdf
+# internal scaffolding
+docs/write-paper-handoff.md
+# draft paper — un-ignore once framing is fixed
+docs/Draft_Paper.md
