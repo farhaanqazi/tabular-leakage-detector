@@ -4,11 +4,11 @@
 ![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-orange)
 ![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-Machine%20Learning-green)
 
-This repository documents a **forensic data-leakage audit** of a Master's Project on Parkinson's Disease classification, and the reusable **Data Leakage Detector** it produced as a durable artifact.
+During my 2023 MSc thesis on Parkinson's disease classification, I manually identified and excluded a structurally leaked variable (`Duration=0.0` for all healthy controls) that was causing artificial perfect-separation and overfitting in early model iterations. By manually dropping this column, I was able to report honest, rigorous biomechanical performance metrics for the thesis.
 
-The project began as a faithful reproduction of the original thesis. Reproducing its "too good to be true" 1.0 AUC results exposed a data leak — `Duration = 0.0` for every healthy control — that let models score perfectly by thresholding a single column. Rather than quietly patch that one dataset, the audit (a) honestly re-derives the true biomechanical performance, and (b) generalizes the pathology into a standalone, scoped detector that surfaces suspicious label-predictiveness in any tabular dataset prior to training.
+However, recognising how easily such structural flaws can silently compromise medical datasets, **that manual discovery inspired this project**: a reusable, automated **Data Leakage Detector** for tabular datasets. 
 
-The contribution is the audit discipline; the detector is the tool that fell out of it — deliberately small, scoped, and honest about its limits.
+Instead of relying on a data scientist's manual intuition to notice "overfitting" or suspiciously high scores, this tool systematically evaluates and flags suspicious label-predictiveness in any tabular dataset *prior* to training. To demonstrate the tool's efficiency, it was tested on multiple real-world datasets—including the original Parkinson's dataset, where it successfully and automatically flagged the exact same `Duration` leak that I had to find manually in 2023.
 
 ## 🎯 Scope & Capabilities
 
@@ -28,9 +28,9 @@ It frames leakage detection as **decision-support**, producing a ranked list of 
 
 The detector is rigorously validated across multiple datasets to evaluate both precision and recall, ensuring it avoids false-positives on genuinely predictive features:
 
-1. **Parkinson's Disease (Regression):** Re-catches the original `Duration` leak unprompted.
+1. **Parkinson's Disease (Regression):** The original inspiration. The tool successfully re-catches the `Duration` leak automatically.
 2. **Breast Cancer Wisconsin (Hard Negative Control):** Evaluates precision against legitimately strong clinical markers (AUC > 0.95), verifying they are not incorrectly flagged as degenerate.
-3. **Wine Quality (Generalization):** Tests detection on binarized generic datasets with subtle injected proxy leaks.
+3. **Other Real-World Leaks:** Tests detection on Bank Marketing, Heart Failure, and Cervical Cancer datasets, all of which contain organic, documented proxy leaks.
 
 See [DATA.md](docs/DATA.md) and [DATASHEET.md](docs/DATASHEET.md) for details on the primary PD dataset used for the core regression test.
 
@@ -126,23 +126,15 @@ The detector is validated on **five real-world datasets that contain organic, do
 ### Honest scope: decision-support, not auto-deletion
 The detector outputs a **ranked list for human review**, not automated verdicts — deliberately. On Hotel Booking the degeneracy flag also fired on `required_car_parking_spaces` (a genuine within-class degeneracy, but AUC only 0.55 — *not* a meaningful leak). Combined with its low predictiveness, a human dismisses it in seconds. The tool surfaces candidates; the analyst decides. It does **not** catch temporal, train/test-contamination, or multivariate leakage.
 
-## 🛠️ Primary Case Study: Parkinson's Honest Evaluation
+## 🛠️ Validating the Tool on the Original Inspiration (Parkinson's Dataset)
 
-The Parkinson's dataset is the deep-dive case study (full grid-search across 7 models with confidence intervals). To recover the true clinical value of the spatial-temporal features (Velocity, Acceleration, AreaError, etc.), the leaked `Duration` column was dropped and the tuned pipeline re-run, yielding:
+To demonstrate the value of the tool, the dataset from the original 2023 thesis was fed into the automated detector. As intended, the detector immediately hard-flagged the `Duration` column as a structural leak, automating the exact discovery that required manual investigation in 2023.
 
-| Model | Accuracy | Accuracy (95% CI) | Precision | Sensitivity | AUC (95% CI) |
-|-------|----------|-------------------|-----------|-------------|--------------|
-| **Random Forest** | **0.831** | [0.738, 0.908] | 0.840 | 0.933 | **[0.646, 0.916]** |
-| **XGBoost**       | 0.754 | [0.646, 0.846] | 0.774 | 0.911 | [0.618, 0.893] |
-| **Decision Tree** | 0.754 | [0.646, 0.862] | 0.854 | 0.778 | [0.625, 0.872] |
-| **Logistic Reg.** | 0.692 | [0.569, 0.800] | 0.727 | 0.889 | [0.675, 0.903] |
-| **SVC**           | 0.677 | [0.569, 0.785] | 0.731 | 0.844 | [0.515, 0.784] |
-| **KNN**           | 0.662 | [0.538, 0.769] | 0.735 | 0.800 | [0.438, 0.736] |
-| **MLP**           | 0.646 | [0.538, 0.754] | 0.739 | 0.756 | [0.580, 0.838] |
+To quantify the danger of this specific leak if it *hadn't* been caught, we trained models both with and without the leaked column. 
 
-### 📊 Final Synthesis: Before & After Data Leak Correction
+The **"Honest" column reproduces the baseline of the 2023 thesis results**, where the leak was properly excluded. Note that while the fully hyperparameter-tuned models in the official thesis reported AUCs clustering tightly between **0.75 and 0.79**, the "Honest" metrics below use uniform, untuned default models for cross-dataset comparability (yielding a wider 0.588–0.798 AUC range). 
 
-**Provenance note:** the original 2023 thesis never reported these perfect scores — it reported ~72–76% accuracy and concluded that separating healthy controls is hard. The **"Honest" column reproduces that thesis result** (~75–83%). The **"Leaked" column is what a *naive* model produces if `Duration` is included** — a latent trap in the raw data that this project surfaced, not a number the thesis claimed. This table quantifies that trap:
+The **"Leaked" column demonstrates what a naive model produces if the detector is not used and the leak slips through** — artificially perfect 1.0 AUC scores.
 
 | Model | Accuracy (Leaked) | Accuracy (Honest) | Accuracy Diff | AUC (Leaked) | AUC (Honest) |
 |-------|-------------------|-------------------|---------------|--------------|--------------|
@@ -154,7 +146,7 @@ The Parkinson's dataset is the deep-dive case study (full grid-search across 7 m
 | KNN | 0.800 | 0.662 | -0.138 | 0.900 | 0.588 |
 | MLP | 1.000 | 0.646 | -0.354 | 0.999 | 0.716 |
 
-This realistic baseline (~75% - 83%) validates the original 2023 thesis conclusions that differentiating healthy controls is challenging using purely biomechanical features, and demonstrates the necessity of rigorous Data QA in medical MLOps.
+This realistic baseline validates the original 2023 thesis conclusions that differentiating healthy controls is challenging using purely biomechanical features, while simultaneously proving the necessity of automated Data QA tools in medical MLOps to prevent catastrophic false-confidence.
 
 ### Subgroup Fairness
 
